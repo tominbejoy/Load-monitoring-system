@@ -1,0 +1,49 @@
+function D = PandO(Param, Enabled, V, I)
+% MPPT controller based on the Perturb & Observe algorithm.
+% D output = Duty cycle of the boost converter (value between 0 and 1)
+%
+% Enabled input = 1 to enable the MPPT controller
+% V input = PV array terminal voltage (V)
+% I input = PV array current (A)
+%
+% Param input:
+Dinit = Param(1); %Initial value for D output
+Dmax = Param(2); %Maximum value for D
+Dmin = Param(3); %Minimum value for D
+deltaD = Param(4); %Increment value used to increase/decrease the duty cycle D
+% ( increasing D = decreasing Vref )
+%
+persistent Vold Pold Dold;
+if isempty(Vold)
+Vold=0;
+Pold=0;
+Dold=Dinit;
+end
+P= V*I;
+dV= V - Vold;
+dP= P - Pold;
+if dP ~= 0 && Enabled ~=0
+% if dP>1e-9 & dP<-1e-9 & Enabled ~=0
+if dP < 0
+if dV < 0
+D = Dold - deltaD;
+else
+D = Dold + deltaD;
+end
+else
+if dV < 0
+D = Dold + deltaD;
+else
+D = Dold - deltaD;
+end
+end
+else
+D=Dold;
+end
+if D >= Dmax || D<= Dmin
+
+D=Dold;
+end
+Dold=D;
+Vold=V;
+Pold=P;
