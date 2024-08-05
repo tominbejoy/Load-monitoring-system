@@ -1,0 +1,50 @@
+#include <Filters.h>
+#define ACS_Pin A0 //Sensor data pin on A0 analog input
+#define RELAY_PIN 8 // Relay connected to digital pin 8
+
+float ACS_Value; //Here we keep the raw data valuess
+float testFrequency = 50; // test signal frequency (Hz)
+float windowLength = 40.0/testFrequency; // how long to average the signal, for statistist
+
+float intercept = 0; // to be adjusted based on calibration testing
+float slope = 0.0752; // to be adjusted based on calibration testing
+
+float Amps_TRMS; // estimated actual current in amps
+
+unsigned long printPeriod = 1000; // in milliseconds
+// Track time in milliseconds since last reading
+unsigned long previousMillis = 0;
+
+void setup() {
+Serial.begin( 9600 ); // Start the serial port
+pinMode(ACS_Pin,INPUT); //Define the pin mode
+pinMode(RELAY_PIN, OUTPUT); // Set the relay pin as output
+}
+
+void loop() {
+RunningStatistics inputStats; // create statistics to look at the raw test signal
+inputStats.setWindowSecs( windowLength ); //Set the window length
+
+while( true ) {
+ACS_Value = analogRead(ACS_Pin); // read the analog in value:
+inputStats.input(ACS_Value); // log to Stats function
+
+if((unsigned long)(millis() - previousMillis) >= printPeriod) { //every second we do the
+
+calculation
+previousMillis = millis(); // update time
+
+Amps_TRMS = intercept + slope * inputStats.sigma();
+
+Serial.print( "\t Amps: " );
+Serial.println( Amps_TRMS ); // print the Amps_TRMS value and move to the next line
+
+// If current is greater than 0.6A, trigger the relay
+if(Amps_TRMS > 0.6) {
+digitalWrite(RELAY_PIN, HIGH); // Turn on the relay
+} else {
+digitalWrite(RELAY_PIN, LOW); // Turn off the relay
+}
+}
+}
+}
